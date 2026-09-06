@@ -14,9 +14,11 @@ assert adf_to_markdown(created.value).value == "Hello [~accountId:557057:User-Ab
 
 ## API and behavior
 
-- `markdown_to_adf(markdown, *, strict=False) -> ConversionResult[AdfDocument]`
+- `markdown_image_urls(markdown, *, strict=False) -> ConversionResult[tuple[str, ...]]`
+- `markdown_to_adf(markdown, *, strict=False, resolved_images=()) -> ConversionResult[AdfDocument]`
 - `adf_to_markdown(document, *, strict=False) -> ConversionResult[str]`
 - `validate_adf(document) -> None`
+- `verify_jira_media_readback(submitted, persisted, *, resolved_images) -> None`
 
 A `ConversionResult` holds `value` and an ordered tuple of structured
 `Diagnostic` values. `strict=True` converts any readable-degradation warning
@@ -84,8 +86,18 @@ rather than silently dropped.
 
 See the [support matrix](https://github.com/en-ver/adf-bridge/blob/main/docs/support-matrix.md)
 and [diagnostics guide](https://github.com/en-ver/adf-bridge/blob/main/docs/diagnostics.md)
-for details. This package does not perform Jira lookups, network operations,
-CLI work, or plugin registration.
+for details. `markdown_image_urls()` uses the same focused parser as conversion
+and returns supported image destinations in source order. Callers can supply
+immutable `ResolvedJiraImage(source_url, media_id, collection)` values to convert
+exact matching image URLs into Jira `file` media; unmapped URLs remain external.
+Mappings are data only: invalid, unused, duplicate-source, or duplicate Jira
+media-identity (`media_id`, `collection`) entries fail, and no URL normalization
+or Jira enrichment is performed. Markdown owns alt text for every occurrence.
+Managed media cannot render back to its original attachment-content URL.
+`verify_jira_media_readback()` narrowly checks persisted managed media at the same
+ADF paths, permitting only known Jira local IDs, sizing, occurrence keys, and
+nonnegative media dimensions. This package does not perform Jira lookups, network
+operations, CLI work, or plugin registration.
 
 ## Schema and licenses
 

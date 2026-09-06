@@ -40,6 +40,14 @@ class AdfConversionError(AdfBridgeError):
         self.path = path
 
 
+class JiraMediaVerificationError(AdfBridgeError):
+    """Persisted Jira managed media differs from the submitted ADF."""
+
+    def __init__(self, message: str, *, path: str = "") -> None:
+        super().__init__(message)
+        self.path = path
+
+
 class LossyConversionError(AdfBridgeError):
     """Strict conversion rejected warnings that non-strict conversion returns."""
 

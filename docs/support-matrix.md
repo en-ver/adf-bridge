@@ -9,10 +9,13 @@
 
 Markdown supports CommonMark blocks/inlines plus GFM tables, strikethrough,
 URL autolinks, and task-list recognition. Task state is visible `[ ]`/`[x]`
-text with a warning; raw HTML is literal text with a warning. Inline images
-are promoted to external `mediaSingle` nodes and warn when surrounding inline
-layout changes or an image title is discarded. Their soft and hard alt-text
-breaks normalize to spaces. Images in headings and table cells fail
+text with a warning; raw HTML is literal text with a warning. Inline images are promoted to external `mediaSingle` nodes unless an exact
+caller-supplied `ResolvedJiraImage.source_url` selects managed `file` media.
+Managed nodes retain the same centered layout and per-occurrence Markdown alt
+text, without authored dimensions, title, local ID, or occurrence key. Image
+promotion warns when surrounding inline layout changes or an image title is
+discarded. Their soft and hard alt-text breaks normalize to spaces. Images in
+headings and table cells fail
 intentionally rather than producing invalid ADF. Linked Markdown images fail
 because v0.1 defines no canonical media-mark placement.
 

@@ -67,6 +67,14 @@ being interpolated into Markdown. Code-block text uses the Mistune fence
 canonicalization (LF and a trailing newline when nonempty), warning only when
 that changes the source text.
 
+Managed Jira image resolution is caller-supplied data only:
+`ResolvedJiraImage(source_url, media_id, collection)`. The bridge performs no
+URL parsing, origin checks, Media Services lookup, redirect handling, or network
+I/O. Exact parser-produced destinations select managed `file` media; all other
+images remain external. Persisted readback verification permits only documented
+Jira-generated local IDs, sizing, occurrence keys, and nonnegative dimensions,
+then rejects any managed-media path, identity, alt, layout, or structure change.
+
 Only exact lowercase `<br>` inside a GFM table cell is recognized as an ADF
 `hardBreak`. Other HTML spellings, attributes, and every `<br>` outside a table
 remain literal raw HTML text with a diagnostic. The Atlassian schema is

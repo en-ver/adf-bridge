@@ -9,7 +9,12 @@ codes include `markdown.raw_html`, `markdown.task_list_degraded`,
 `adf.terminal_hard_break_discarded`, `adf.table_cell_flattened`,
 `adf.attribute_discarded`, `markdown.nul_normalized`, and
 `markdown.reference_definitions_discarded`.
-ADF-to-Markdown paths are RFC 6901 JSON Pointers.
+ADF-to-Markdown paths are RFC 6901 JSON Pointers. Empty, duplicate, and unused
+resolved-image mappings are fatal `AdfConversionError` values regardless of strict
+mode; contract-shape errors raise `TypeError`. They do not add warning diagnostics.
+`verify_jira_media_readback()` raises
+`JiraMediaVerificationError` with the first failing RFC 6901 path rather than a
+lossy-conversion diagnostic.
 
 `adf.code_span_line_break_normalized` is emitted once for each source text node
 with a code mark whose CRLF, CR, or LF is normalized to a space. Its path points

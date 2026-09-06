@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import html
 import re
+from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from html.entities import html5
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import mistune
 from mistune._inline.links import (
@@ -37,10 +38,12 @@ from ._jira_profile import (
     is_empty_or_whitespace_only_quote_content,
     validate_mention_id,
 )
+from ._resolved_images import _validated_resolved_images
 from ._schema import validate_adf
-from ._types import AdfDocument, ConversionResult, Diagnostic
+from ._types import AdfDocument, ConversionResult, Diagnostic, ResolvedJiraImage
 
 Token = dict[str, Any]
+T = TypeVar("T")
 # Preserve ordinary Markdown links while allowing adjacent canonical mention syntax.
 _ACCOUNT_MENTION = r"\[~(?i:accountid):(?P<account_id>[^\s\\\]]+)\](?!\()"
 _ENTITY_REFERENCE = re.compile(
@@ -227,7 +230,10 @@ _PARSER.inline.register("link", None, _parse_opaque_destination_link)
 
 @dataclass
 class _Collector:
+    resolutions: dict[str, ResolvedJiraImage] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    image_urls: list[str] = field(default_factory=list)
+    used_resolutions: set[str] = field(default_factory=set)
 
     def warn(self, code: str, message: str) -> None:
         self.diagnostics.append(Diagnostic(code, "warning", message))
@@ -385,7 +391,20 @@ def _inline(
             image_url = attrs.get("url")
             if not isinstance(image_url, str) or not image_url:
                 raise AdfConversionError("Markdown image has no usable URL")
-            media_attrs: dict[str, object] = {"type": "external", "url": image_url}
+            collector.image_urls.append(image_url)
+            resolution = collector.resolutions.get(image_url)
+            if resolution is None:
+                media_attrs: dict[str, object] = {
+                    "type": "external",
+                    "url": image_url,
+                }
+            else:
+                collector.used_resolutions.add(image_url)
+                media_attrs = {
+                    "type": "file",
+                    "id": resolution.media_id,
+                    "collection": resolution.collection,
+                }
             if isinstance(attrs.get("title"), str):
                 collector.warn(
                     "markdown.image_title_discarded",
@@ -642,14 +661,14 @@ def _blocks(tokens: list[Token], collector: _Collector) -> list[dict[str, object
     return blocks
 
 
-def markdown_to_adf(
-    markdown: str, *, strict: bool = False
-) -> ConversionResult[AdfDocument]:
-    """Convert portable GFM Markdown into the focused Jira ADF profile."""
+def _convert_markdown(
+    markdown: str, resolutions: dict[str, ResolvedJiraImage]
+) -> tuple[AdfDocument, _Collector]:
+    """Parse and convert Markdown once for both discovery and construction."""
 
     if not isinstance(markdown, str):
         raise TypeError("markdown must be a string")
-    collector = _Collector()
+    collector = _Collector(resolutions=resolutions)
     _validate_markdown_mention_ids(markdown)
     markdown = _normalize_markdown_nuls(markdown, collector)
     if _is_commonmark_blank(markdown):
@@ -677,7 +696,38 @@ def markdown_to_adf(
                 )
     document: AdfDocument = {"type": "doc", "version": 1, "content": content}
     validate_adf(document)
+    return document, collector
+
+
+def _conversion_result(
+    value: T, collector: _Collector, strict: bool
+) -> ConversionResult[T]:
     diagnostics = tuple(collector.diagnostics)
     if strict and diagnostics:
         raise LossyConversionError(diagnostics)
-    return ConversionResult(document, diagnostics)
+    return ConversionResult(value, diagnostics)
+
+
+def markdown_image_urls(
+    markdown: str, *, strict: bool = False
+) -> ConversionResult[tuple[str, ...]]:
+    """Return supported Markdown image destinations in source order."""
+
+    _, collector = _convert_markdown(markdown, {})
+    return _conversion_result(tuple(collector.image_urls), collector, strict)
+
+
+def markdown_to_adf(
+    markdown: str,
+    *,
+    strict: bool = False,
+    resolved_images: Sequence[ResolvedJiraImage] = (),
+) -> ConversionResult[AdfDocument]:
+    """Convert portable GFM Markdown into the focused Jira ADF profile."""
+
+    resolutions = _validated_resolved_images(resolved_images)
+    document, collector = _convert_markdown(markdown, resolutions)
+    unused = set(resolutions).difference(collector.used_resolutions)
+    if unused:
+        raise AdfConversionError("resolved_images contains an unused source_url")
+    return _conversion_result(document, collector, strict)

@@ -25,6 +25,15 @@ class Diagnostic:
 
 
 @dataclass(frozen=True, slots=True)
+class ResolvedJiraImage:
+    """Caller-resolved identity for a Markdown image stored by Jira."""
+
+    source_url: str
+    media_id: str
+    collection: str
+
+
+@dataclass(frozen=True, slots=True)
 class ConversionResult(Generic[T]):
     """A converted value and any readable-degradation warnings."""
 
