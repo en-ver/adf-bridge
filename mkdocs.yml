@@ -1,0 +1,11 @@
+site_name: adf-bridge
+site_description: Focused pure-Python Markdown and Jira ADF conversion
+repo_url: https://github.com/en-ver/adf-bridge
+nav:
+  - Overview: index.md
+  - API: api.md
+  - Support matrix: support-matrix.md
+  - Diagnostics: diagnostics.md
+  - Schema and security: schema-and-security.md
+theme:
+  name: mkdocs

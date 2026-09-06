@@ -1,0 +1,18 @@
+{
+  "source_package": "@atlaskit/adf-schema",
+  "source_version": "57.3.4",
+  "variant": "full",
+  "source_file": "dist/json-schema/v1/full.json",
+  "source_tarball": "https://registry.npmjs.org/@atlaskit/adf-schema/-/adf-schema-57.3.4.tgz",
+  "source_url": "https://unpkg.com/@atlaskit/adf-schema@57.3.4/dist/json-schema/v1/full.json",
+  "official_alias": "http://go.atlassian.com/adf-json-schema",
+  "sha256": "75f080928a970250eb8289e9cae5374e3c2a6c0ac3ca22478acaa9d3f39484a3",
+  "size_bytes": 73617,
+  "json_schema_draft": "draft-04",
+  "refs": "local-only",
+  "ref_count": 276,
+  "modification_status": "unmodified",
+  "retrieved_at": "2026-09-05",
+  "license": "Apache-2.0",
+  "copyright": "Copyright 2019 Atlassian Pty Ltd"
+}

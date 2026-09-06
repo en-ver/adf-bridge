@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adf-bridge"
+version = "0.1.0"
+description = "Focused, pure-Python conversion between Markdown and Jira ADF"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+authors = [{ name = "adf-bridge contributors" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Text Processing :: Markup",
+]
+dependencies = [
+  "fastjsonschema>=2.22.2,<2.23",
+  "mistune>=3.3.4,<3.4",
+]
+
+[project.urls]
+Documentation = "https://github.com/en-ver/adf-bridge#readme"
+Repository = "https://github.com/en-ver/adf-bridge"
+Issues = "https://github.com/en-ver/adf-bridge/issues"
+
+[dependency-groups]
+dev = [
+  "build>=1.2",
+  "mkdocs>=1.6",
+  "pytest>=8.3",
+  "ruff>=0.11",
+  "ty>=0.0.1a5",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+adf_bridge = ["py.typed", "data/*.json", "data/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ty]
+environment = { python-version = "3.11" }
