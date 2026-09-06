@@ -1646,6 +1646,49 @@ def test_destinations_titles_and_degraded_text_are_source_safe() -> None:
     ]
 
 
+@pytest.mark.parametrize("media_type", ["file", "link"])
+@pytest.mark.parametrize("alt", [None, ""])
+def test_managed_media_never_presents_its_id(media_type: str, alt: str | None) -> None:
+    media_id = "123e4567-e89b-12d3-a456-426614174000"
+    document = {
+        "type": "doc",
+        "version": 1,
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": f"ordinary {media_id}"}],
+            },
+            {
+                "type": "mediaSingle",
+                "attrs": {"layout": "center"},
+                "content": [
+                    {
+                        "type": "media",
+                        "attrs": {
+                            "type": media_type,
+                            "id": media_id,
+                            "collection": "attachments",
+                        },
+                    }
+                ],
+            },
+        ],
+    }
+
+    if alt is not None:
+        document["content"][1]["content"][0]["attrs"]["alt"] = alt
+
+    no_alt = adf_to_markdown(document).value
+    assert no_alt == f"ordinary {media_id}\n\nattachment"
+    assert no_alt.count(media_id) == 1
+
+    with_alt = deepcopy(document)
+    with_alt["content"][1]["content"][0]["attrs"]["alt"] = "# readable"
+    rendered_alt = adf_to_markdown(with_alt).value
+    assert rendered_alt == f"ordinary {media_id}\n\n\\# readable"
+    assert rendered_alt.count(media_id) == 1
+
+
 @pytest.mark.parametrize(
     "mark",
     [

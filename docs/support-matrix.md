@@ -12,8 +12,11 @@ URL autolinks, and task-list recognition. Task state is visible `[ ]`/`[x]`
 text with a warning; raw HTML is literal text with a warning. Inline images are promoted to external `mediaSingle` nodes unless an exact
 caller-supplied `ResolvedJiraImage.source_url` selects managed `file` media.
 Managed nodes retain the same centered layout and per-occurrence Markdown alt
-text, without authored dimensions, title, local ID, or occurrence key. Image
-promotion warns when surrounding inline layout changes or an image title is
+text, without authored dimensions, title, local ID, or occurrence key. When
+rendering managed `file` or `link` media back to Markdown, nonempty alt text is
+preserved as escaped readable text and absent or empty alt becomes neutral
+`attachment` text; opaque media IDs are never presented. Image promotion warns
+when surrounding inline layout changes or an image title is
 discarded. Their soft and hard alt-text breaks normalize to spaces. Images in
 headings and table cells fail
 intentionally rather than producing invalid ADF. Linked Markdown images fail

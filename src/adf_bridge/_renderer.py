@@ -1037,16 +1037,9 @@ def _render_media(
         path,
     )
     alt = attrs.get("alt")
-    media_id = attrs.get("id")
     if isinstance(alt, str):
         alt = _normalize_nul_text(alt, state, (*path, "attrs", "alt"))
-    if isinstance(media_id, str):
-        media_id = _normalize_nul_text(media_id, state, (*path, "attrs", "id"))
-    preserved: set[str] = set()
-    if isinstance(alt, str) and alt:
-        preserved.add("alt")
-    elif media_id:
-        preserved.add("id")
+    preserved: set[str] = {"alt"} if isinstance(alt, str) and alt else {"id"}
     state.discard(
         attrs,
         {
@@ -1065,9 +1058,7 @@ def _render_media(
     context = _LiteralContext(table_cell=False, block_start=True)
     if isinstance(alt, str) and alt:
         return _emit_literal(alt, context)
-    return (
-        _emit_literal(f"attachment {media_id}", context) if media_id else "attachment"
-    )
+    return "attachment"
 
 
 def _render_table_cell(
