@@ -93,7 +93,10 @@ exact matching image URLs into Jira `file` media; unmapped URLs remain external.
 Mappings are data only: invalid, unused, duplicate-source, or duplicate Jira
 media-identity (`media_id`, `collection`) entries fail, and no URL normalization
 or Jira enrichment is performed. Markdown owns alt text for every occurrence.
-Managed media cannot render back to its original attachment-content URL.
+Managed media cannot render back to its original attachment-content URL. On
+ADF-to-Markdown conversion, nonempty managed-media alt text is preserved as
+escaped readable text; absent or empty alt renders as neutral `attachment` text.
+Opaque media IDs are never used in Markdown presentation.
 `verify_jira_media_readback()` narrowly checks persisted managed media at the same
 ADF paths, permitting only known Jira local IDs, sizing, occurrence keys, and
 nonnegative media dimensions. This package does not perform Jira lookups, network
