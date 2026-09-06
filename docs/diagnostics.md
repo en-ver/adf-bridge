@@ -5,8 +5,9 @@ codes include `markdown.raw_html`, `markdown.task_list_degraded`,
 `markdown.image_title_discarded`, `adf.status_degraded`,
 `adf.media_degraded`, `adf.code_span_line_break_normalized`,
 `adf.code_block_text_normalized`, `adf.presentation_mark_degraded`,
-`adf.boundary_whitespace_normalized`, `adf.terminal_hard_break_discarded`,
-`adf.table_cell_flattened`, `adf.attribute_discarded`, and
+`adf.boundary_whitespace_normalized`, `adf.nul_normalized`,
+`adf.terminal_hard_break_discarded`, `adf.table_cell_flattened`,
+`adf.attribute_discarded`, `markdown.nul_normalized`, and
 `markdown.reference_definitions_discarded`.
 ADF-to-Markdown paths are RFC 6901 JSON Pointers.
 
@@ -16,6 +17,13 @@ to that node's `text` member. `adf.code_block_text_normalized` is emitted once
 per code block only when its combined text changes during canonical LF and
 trailing-newline normalization; its path is that block's `content` member. An
 empty code block is already canonical and has no diagnostic.
+
+`adf.nul_normalized` is emitted once per ADF ordinary or readable-fallback
+text member containing U+0000; its path is that member and the rendered value
+uses U+FFFD as CommonMark requires. `markdown.nul_normalized` is emitted once
+per Markdown input containing U+0000, before parsing, and has no JSON Pointer.
+Both warnings escalate in strict mode. Mention IDs containing U+0000 are
+instead fatal because their opaque identity cannot be degraded.
 
 `adf.presentation_mark_degraded` is emitted once per source text node at its
 `marks` member when an `em`, `strong`, or `strike` mark has unrepresentable

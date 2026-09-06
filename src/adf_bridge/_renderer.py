@@ -88,6 +88,21 @@ class _RenderState:
         )
 
 
+def _normalize_nul_text(
+    text: str, state: _RenderState, path: tuple[str | int, ...]
+) -> str:
+    """Apply CommonMark's required NUL replacement to visible text."""
+
+    if "\x00" not in text:
+        return text
+    state.warn(
+        "adf.nul_normalized",
+        "ADF text U+0000 is normalized to U+FFFD by CommonMark",
+        path,
+    )
+    return text.replace("\x00", "\ufffd")
+
+
 def _attrs(node: dict[str, object]) -> dict[str, object]:
     attrs = node.get("attrs", {})
     if not isinstance(attrs, dict):  # Schema validation makes this defensive only.
@@ -723,6 +738,7 @@ def _render_inline(
                 raise AdfConversionError(
                     "text node has no text", path=pointer(node_path)
                 )
+            text = _normalize_nul_text(text, state, (*node_path, "text"))
             marks = _normalized_marks(
                 node.get("marks", []), state, (*node_path, "marks")
             )
@@ -876,6 +892,12 @@ def _render_inline(
                     "ADF emoji has no readable value", path=pointer(node_path)
                 )
             preserved = {"text"} if attrs.get("text") == value else {"shortName"}
+            value_path = (
+                (*node_path, "attrs", "text")
+                if "text" in preserved
+                else (*node_path, "attrs", "shortName")
+            )
+            value = _normalize_nul_text(value, state, value_path)
             state.discard(
                 attrs,
                 {"shortName", "id", "text", "localId"},
@@ -949,6 +971,9 @@ def _render_inline(
                 raise AdfConversionError(
                     "ADF status has no text", path=pointer(node_path)
                 )
+            status_text = _normalize_nul_text(
+                status_text, state, (*node_path, "attrs", "text")
+            )
             fragments.append(
                 literal_fragment(
                     status_text, _LiteralContext(table_cell, at_block_start)
@@ -995,7 +1020,11 @@ def _render_media(
             )
         _validate_destination(url, (*path, "attrs", "url"))
         alt = attrs.get("alt")
-        alt_text = alt if isinstance(alt, str) else ""
+        alt_text = (
+            _normalize_nul_text(alt, state, (*path, "attrs", "alt"))
+            if isinstance(alt, str)
+            else ""
+        )
         label = _emit_label(alt_text, table_cell=False)
         return f"![{label}]({_link_destination(url, None, table_cell=False)})"
     if media_type not in {"file", "link"}:
@@ -1009,6 +1038,10 @@ def _render_media(
     )
     alt = attrs.get("alt")
     media_id = attrs.get("id")
+    if isinstance(alt, str):
+        alt = _normalize_nul_text(alt, state, (*path, "attrs", "alt"))
+    if isinstance(media_id, str):
+        media_id = _normalize_nul_text(media_id, state, (*path, "attrs", "id"))
     preserved: set[str] = set()
     if isinstance(alt, str) and alt:
         preserved.add("alt")
@@ -1429,7 +1462,14 @@ def _render_block(
                 (*path, "attrs", "language"),
             )
             language = None
-        code = "".join(str(child.get("text", "")) for child in _content(node))
+        code = "".join(
+            _normalize_nul_text(
+                str(child.get("text", "")),
+                state,
+                (*path, "content", index, "text"),
+            )
+            for index, child in enumerate(_content(node))
+        )
         normalized_code = _normalize_code_block_text(code, state, (*path, "content"))
         fence = _block_fence(normalized_code)
         return f"{fence}{language or ''}\n{normalized_code}{fence}"
@@ -1450,6 +1490,8 @@ def _render_block(
             attrs, {"title", "localId"}, (*path, "attrs"), preserved={"title"}
         )
         title = attrs.get("title")
+        if isinstance(title, str):
+            title = _normalize_nul_text(title, state, (*path, "attrs", "title"))
         prefix = (
             f"**{_emit_literal(title, _LiteralContext(table_cell, False))}**"
             if isinstance(title, str) and title

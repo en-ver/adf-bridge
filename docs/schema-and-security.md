@@ -24,9 +24,12 @@ whitespace remains literal when Markdown can represent it. At list-item and
 table-cell boundaries, an exact source entity is used when available; otherwise
 the readable trim is diagnosed at the source text pointer. Presentation marks
 whose Unicode-whitespace boundary cannot be source-encoded exactly are
-intentionally discarded with a warning while retaining their text. Mention IDs
-encode `&`, `<`, and `>` at the source boundary, and parsing decodes exactly one
-complete entity-reference layer before applying the opaque-ID rules.
+intentionally discarded with a warning while retaining their text. U+0000 in
+ordinary and readable-fallback text is intentionally normalized to U+FFFD with
+a diagnostic at the conversion boundary. Mention IDs encode `&`, `<`, and `>`
+at the source boundary, and parsing decodes exactly one complete
+entity-reference layer before applying the opaque-ID rules; IDs containing
+U+0000 are rejected rather than normalized to preserve identity.
 
 Link, image, and card labels have their own entity encoding for nested Markdown
 punctuation, preventing URL-shaped labels from retaining escape backslashes.

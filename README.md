@@ -35,7 +35,7 @@ canonical Jira account-ID mentions. Mention IDs remain opaque; `&`, `<`, and
 `>` are source-encoded safely. Adjacent marked text uses a local mark stack, so
 shared presentation marks stay open across supported overlaps. Basic table-cell
 paragraphs and hard breaks are flattened through exact lowercase `<br>` with one
-warning per affected cell. Dates, emoji, cards, status, expand/panel, and
+warning per affected cell. Dates, emoji, inline cards, status, expand/panel, and
 unmarked media have readable warning-producing fallbacks. Inline-code line
 endings normalize to spaces with a diagnostic; code-block text canonicalizes to
 LF with one trailing newline when nonempty and warns only when that changes its
@@ -50,9 +50,11 @@ are opaque values: a reversible CommonMark entity encoding preserves their exact
 supported characters without URL normalization. Caller-authored Markdown
 autolinks and used reference links instead use CommonMark/Mistune URL
 normalization; their raw source spelling is not an opaque-destination
-preservation contract and produces no diagnostic. Markdown consisting only of
-reference definitions produces no visible ADF content and warns with
-`markdown.reference_definitions_discarded`. Values containing a character that
+preservation contract and produces no diagnostic. Ordinary and readable-fallback
+text containing U+0000 normalizes to U+FFFD with a warning; mention IDs
+containing U+0000 are rejected to preserve their opaque identity. Markdown
+consisting only of reference definitions produces no visible ADF content and
+warns with `markdown.reference_definitions_discarded`. Values containing a character that
 HTML5 character references cannot preserve (such as NUL) are fatal at the
 bridge-generated destination attribute. Presentation marks with an
 unrepresentable Unicode-whitespace boundary (such as VT or NEL) preserve their

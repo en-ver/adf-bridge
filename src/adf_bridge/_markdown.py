@@ -58,7 +58,10 @@ def _parse_account_mention(inline: Any, match: re.Match[str], state: Any) -> int
         inline.process_text(match.group(0), state)
     else:
         state.append_token(
-            {"type": "mention", "attrs": {"id": match.group("account_id")}}
+            {
+                "type": "mention",
+                "attrs": {"id": validate_mention_id(match.group("account_id"))},
+            }
         )
     return match.end()
 
@@ -228,6 +231,25 @@ class _Collector:
 
     def warn(self, code: str, message: str) -> None:
         self.diagnostics.append(Diagnostic(code, "warning", message))
+
+
+def _validate_markdown_mention_ids(markdown: str) -> None:
+    """Validate actual mention tokens before normalizing ordinary Markdown text."""
+
+    if "\x00" in markdown:
+        _PARSER.parse(markdown)
+
+
+def _normalize_markdown_nuls(markdown: str, collector: _Collector) -> str:
+    """Apply CommonMark's required NUL replacement once at the input boundary."""
+
+    if "\x00" not in markdown:
+        return markdown
+    collector.warn(
+        "markdown.nul_normalized",
+        "Markdown U+0000 is normalized to U+FFFD by CommonMark",
+    )
+    return markdown.replace("\x00", "\ufffd")
 
 
 def _text(text: str, marks: list[dict[str, object]]) -> dict[str, object] | None:
@@ -628,6 +650,8 @@ def markdown_to_adf(
     if not isinstance(markdown, str):
         raise TypeError("markdown must be a string")
     collector = _Collector()
+    _validate_markdown_mention_ids(markdown)
+    markdown = _normalize_markdown_nuls(markdown, collector)
     if _is_commonmark_blank(markdown):
         content: list[dict[str, object]] = [{"type": "paragraph"}]
     else:

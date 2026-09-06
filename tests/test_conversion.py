@@ -886,6 +886,13 @@ def test_mentions_preserve_opaque_identity_and_canonicalize_label() -> None:
     }
     with pytest.raises(AdfConversionError):
         markdown_to_adf("[~accountId:&#32;]")
+    with pytest.raises(AdfConversionError) as raised:
+        markdown_to_adf("[~accountId:a\x00b]")
+    assert raised.value.path == ""
+    document["content"][0]["content"][0]["attrs"]["id"] = "a\x00b"
+    with pytest.raises(AdfConversionError) as raised:
+        adf_to_markdown(document)
+    assert raised.value.path == "/content/0/content/0/attrs/id"
     document["content"][0]["content"][0]["attrs"]["id"] = "bad id"
     with pytest.raises(AdfConversionError) as raised:
         adf_to_markdown(document)
@@ -1546,6 +1553,46 @@ def test_destinations_titles_and_degraded_text_are_source_safe() -> None:
         adf_to_markdown(unrepresentable_href)
     assert raised.value.path == "/content/0/content/0/marks/0/attrs/href"
 
+    nul_text = {
+        "type": "doc",
+        "version": 1,
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [
+                    {"type": "text", "text": "a\x00b", "marks": [{"type": "strong"}]},
+                    {
+                        "type": "status",
+                        "attrs": {"text": "c\x00d", "color": "green"},
+                    },
+                ],
+            }
+        ],
+    }
+    nul_result = adf_to_markdown(nul_text)
+    assert "\x00" not in nul_result.value
+    assert nul_result.value.count("\ufffd") == 2
+    assert [(item.code, item.path) for item in nul_result.diagnostics] == [
+        ("adf.nul_normalized", "/content/0/content/0/text"),
+        ("adf.status_degraded", "/content/0/content/1"),
+        ("adf.attribute_discarded", "/content/0/content/1/attrs/color"),
+        ("adf.nul_normalized", "/content/0/content/1/attrs/text"),
+    ]
+    with pytest.raises(LossyConversionError) as raised:
+        adf_to_markdown(nul_text, strict=True)
+    assert raised.value.diagnostics == nul_result.diagnostics
+
+    markdown_nul = markdown_to_adf("a\x00b")
+    assert markdown_nul.value["content"][0]["content"] == [
+        {"type": "text", "text": "a\ufffdb"}
+    ]
+    assert [(item.code, item.path) for item in markdown_nul.diagnostics] == [
+        ("markdown.nul_normalized", None)
+    ]
+    with pytest.raises(LossyConversionError) as raised:
+        markdown_to_adf("a\x00b", strict=True)
+    assert raised.value.diagnostics == markdown_nul.diagnostics
+
     managed_media = {
         "type": "doc",
         "version": 1,
@@ -1567,7 +1614,15 @@ def test_destinations_titles_and_degraded_text_are_source_safe() -> None:
             }
         ],
     }
-    assert adf_to_markdown(managed_media).value == "\\# heading"
+    managed_result = adf_to_markdown(managed_media)
+    assert managed_result.value == "\\# heading"
+    assert {(item.code, item.path) for item in managed_result.diagnostics} >= {
+        ("adf.media_single_degraded", "/content/0"),
+        ("adf.media_degraded", "/content/0/content/0"),
+    }
+    with pytest.raises(LossyConversionError) as raised:
+        adf_to_markdown(managed_media, strict=True)
+    assert raised.value.diagnostics == managed_result.diagnostics
 
     status_url = {
         "type": "doc",

@@ -41,8 +41,11 @@ cell parses back to an ADF `hardBreak`. `<BR>`,
 HTML text with the normal raw-HTML warning.
 
 Ordinary/root text preserves CommonMark-trimmed boundary whitespace and line
-endings with reversible character references. Form feed is entity-encoded so it
-round-trips losslessly, while unmarked non-CommonMark whitespace (including VT
+endings with reversible character references. U+0000 in ordinary or readable
+fallback text normalizes to U+FFFD with `adf.nul_normalized` at the source ADF
+member; Markdown input receives one `markdown.nul_normalized` warning. Form
+feed is entity-encoded so it round-trips losslessly, while unmarked
+non-CommonMark whitespace (including VT
 and NEL) remains text even when Mistune would otherwise treat an all-whitespace
 source as blank. At list-item and table-cell text boundaries, a reversible character reference
 is used when available; otherwise the readable trimmed result has one
@@ -75,7 +78,9 @@ only reference definitions has no ADF-visible content and emits
 `markdown.reference_definitions_discarded` (including in strict mode). Values
 whose HTML5 character reference would
 not decode exactly, including NUL and invalid controls, are fatal at the
-bridge-generated destination attribute. Link titles explicitly set to `""` or containing control characters
+bridge-generated destination attribute. Mention IDs containing NUL are fatal
+rather than normalized, preserving their opaque identity. Link titles explicitly
+set to `""` or containing control characters
 (including line endings and NUL) are omitted and emit one normal
 attribute-discard warning at their title pointer. Linked code with `[` or `]` is
 fatal because a portable Mistune/CommonMark label cannot preserve those code

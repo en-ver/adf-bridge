@@ -58,6 +58,7 @@ def validate_mention_id(
     if (
         not isinstance(value, str)
         or not value
+        or "\x00" in value
         or any(character.isspace() or character in "\\]" for character in value)
     ):
         raise AdfConversionError(
