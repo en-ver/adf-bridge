@@ -25,12 +25,16 @@ trusted-schema failures raise `AdfSchemaError`; profile failures raise
 `AdfConversionError`; strict loss raises `LossyConversionError`.
 
 Mentions map without lookup: `[~accountId:<id>]` becomes a `mention` node with
-only `attrs.id`, and renders back with the canonical `accountId` label. IDs are
-opaque and may contain `&`, `<`, `>`, and `|`; the renderer source-encodes those
-characters as needed (including `|` in table cells) and the parser decodes one
-complete entity-reference layer before validating the ID. IDs containing
-whitespace, backslashes, `]`, or U+0000 cannot be represented and fail;
-identity is never normalized.
+only `attrs.id`, and renders back with the canonical `accountId` label. Markdown
+emphasis, strong, or strikethrough around a recognized mention is discarded
+because the Jira ADF schema does not permit mention marks; non-strict conversion
+returns the unmarked mention with one `markdown.mention_marks_discarded` warning,
+and strict mode raises `LossyConversionError`. IDs are opaque and may contain
+`&`, `<`, `>`, and `|`; the renderer source-encodes those characters as needed
+(including `|` in table cells) and the parser decodes one complete
+entity-reference layer before validating the ID. IDs containing whitespace,
+backslashes, `]`, or U+0000 cannot be represented and fail; identity is never
+normalized.
 
 `markdown_image_urls()` performs the same parsing and profile validation as
 `markdown_to_adf()` and returns image destinations in source order, including

@@ -33,8 +33,11 @@ and has no terminal newline; exact source spelling is not round-tripped.
 
 Direct support covers paragraphs, headings, blockquotes, lists, code blocks,
 hard breaks, rules, tables, text, strong/emphasis/strike/code/link marks, and
-canonical Jira account-ID mentions. Mention IDs remain opaque; `&`, `<`, and
-`>` are source-encoded safely. Adjacent marked text uses a local mark stack, so
+canonical Jira account-ID mentions. A mention nested in Markdown emphasis,
+strong, or strikethrough is emitted unmarked because the Jira ADF schema forbids
+mention marks; this produces `markdown.mention_marks_discarded` and strict mode
+rejects it. Mention IDs remain opaque; `&`, `<`, and `>` are source-encoded
+safely. Adjacent marked text uses a local mark stack, so
 shared presentation marks stay open across supported overlaps. Basic table-cell
 paragraphs and hard breaks are flattened through exact lowercase `<br>` with one
 warning per affected cell. Dates, emoji, inline cards, status, expand/panel, and
