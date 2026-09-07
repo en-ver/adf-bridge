@@ -425,7 +425,11 @@ def _inline(
             )
         elif token_type == "mention":
             if active_marks:
-                raise AdfConversionError("formatted mentions are outside the profile")
+                collector.warn(
+                    "markdown.mention_marks_discarded",
+                    "Formatting around a Jira mention cannot be represented in ADF "
+                    "and was discarded",
+                )
             attrs = cast(dict[str, object], token.get("attrs", {}))
             content.append(
                 {

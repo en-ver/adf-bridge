@@ -7,7 +7,8 @@ codes include `markdown.raw_html`, `markdown.task_list_degraded`,
 `adf.code_block_text_normalized`, `adf.presentation_mark_degraded`,
 `adf.boundary_whitespace_normalized`, `adf.nul_normalized`,
 `adf.terminal_hard_break_discarded`, `adf.table_cell_flattened`,
-`adf.attribute_discarded`, `markdown.nul_normalized`, and
+`adf.attribute_discarded`, `markdown.nul_normalized`,
+`markdown.mention_marks_discarded`, and
 `markdown.reference_definitions_discarded`.
 ADF-to-Markdown paths are RFC 6901 JSON Pointers. Empty, duplicate, and unused
 resolved-image mappings are fatal `AdfConversionError` values regardless of strict
@@ -29,6 +30,12 @@ uses U+FFFD as CommonMark requires. `markdown.nul_normalized` is emitted once
 per Markdown input containing U+0000, before parsing, and has no JSON Pointer.
 Both warnings escalate in strict mode. Mention IDs containing U+0000 are
 instead fatal because their opaque identity cannot be degraded.
+
+`markdown.mention_marks_discarded` is emitted once per recognized Jira mention
+nested in Markdown emphasis, strong, or strikethrough. Jira ADF does not permit
+marks on a `mention`, so conversion retains the exact account ID in an unmarked
+mention node and discards the surrounding formatting. It has no JSON Pointer
+and strict mode escalates it.
 
 `adf.presentation_mark_degraded` is emitted once per source text node at its
 `marks` member when an `em`, `strong`, or `strike` mark has unrepresentable

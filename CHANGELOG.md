@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-09-07
+
+- Preserve Jira account-ID mentions nested in Markdown emphasis, strong, or
+  strikethrough as unmarked mentions, with a strict-mode diagnostic because the
+  Jira ADF schema does not permit mention marks.
+
 ## 0.1.1 - 2026-09-06
 
 - Render managed `file` and `link` media without an alt as neutral

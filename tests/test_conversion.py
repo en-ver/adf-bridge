@@ -5,8 +5,10 @@ import pytest
 from adf_bridge import (
     AdfConversionError,
     AdfValidationError,
+    Diagnostic,
     LossyConversionError,
     adf_to_markdown,
+    markdown_image_urls,
     markdown_to_adf,
     validate_adf,
 )
@@ -815,6 +817,7 @@ def test_mentions_preserve_opaque_identity_and_canonicalize_label() -> None:
 
     mention = result.value["content"][0]["content"][0]
     assert mention == {"type": "mention", "attrs": {"id": "557057:User-AbC"}}
+    assert result.diagnostics == ()
     assert adf_to_markdown(result.value).value == "[~accountId:557057:User-AbC]"
 
     adjacent = {
@@ -897,6 +900,55 @@ def test_mentions_preserve_opaque_identity_and_canonicalize_label() -> None:
     with pytest.raises(AdfConversionError) as raised:
         adf_to_markdown(document)
     assert raised.value.path == "/content/0/content/0/attrs/id"
+
+
+@pytest.mark.parametrize(
+    "markdown",
+    (
+        "**[~accountId:A]**",
+        "*[~accountId:A]*",
+        "~~[~accountId:A]~~",
+        "***[~accountId:A]***",
+    ),
+)
+def test_formatted_mentions_degrade_to_unmarked_mentions_with_diagnostics(
+    markdown: str,
+) -> None:
+    diagnostic = Diagnostic(
+        "markdown.mention_marks_discarded",
+        "warning",
+        "Formatting around a Jira mention cannot be represented in ADF "
+        "and was discarded",
+    )
+    expected = {
+        "type": "doc",
+        "version": 1,
+        "content": [
+            {
+                "type": "paragraph",
+                "content": [{"type": "mention", "attrs": {"id": "A"}}],
+            }
+        ],
+    }
+
+    result = markdown_to_adf(markdown)
+    assert result.value == expected
+    assert result.diagnostics == (diagnostic,)
+    assert adf_to_markdown(result.value).value == "[~accountId:A]"
+    with pytest.raises(LossyConversionError) as raised:
+        markdown_to_adf(markdown, strict=True)
+    assert raised.value.diagnostics == result.diagnostics
+
+    discovery = markdown_image_urls(
+        f"{markdown}\n\n![diagram](https://image.test/a.png)"
+    )
+    assert discovery.value == ("https://image.test/a.png",)
+    assert discovery.diagnostics == result.diagnostics
+    with pytest.raises(LossyConversionError) as raised:
+        markdown_image_urls(
+            f"{markdown}\n\n![diagram](https://image.test/a.png)", strict=True
+        )
+    assert raised.value.diagnostics == result.diagnostics
 
 
 def test_schema_rejection_uses_project_error() -> None:
