@@ -9,17 +9,20 @@
 
 Markdown supports CommonMark blocks/inlines plus GFM tables, strikethrough,
 URL autolinks, and task-list recognition. Task state is visible `[ ]`/`[x]`
-text with a warning; raw HTML is literal text with a warning. Inline images are promoted to external `mediaSingle` nodes unless an exact
-caller-supplied `ResolvedJiraImage.source_url` selects managed `file` media.
-Managed nodes retain the same centered layout and per-occurrence Markdown alt
-text, without authored dimensions, title, local ID, or occurrence key. When
-rendering managed `file` or `link` media back to Markdown, nonempty alt text is
-preserved as escaped readable text and absent or empty alt becomes neutral
+text with a warning; raw HTML is literal text with a warning. Inline images are
+promoted to centered block `mediaSingle` nodes unless an exact caller-supplied
+`ResolvedJiraImage.source_url` selects managed `file` media. A managed resolution
+with paired positive integer dimensions authors exact child dimensions and a
+`width: 100`, `widthType: percentage` parent. Legacy dimensionless managed media
+and external media remain widthless. Each image retains per-occurrence Markdown
+alt text and has no authored title, local ID, or occurrence key.
+
+When rendering managed `file` or `link` media back to Markdown, nonempty alt text
+is preserved as escaped readable text and absent or empty alt becomes neutral
 `attachment` text; opaque media IDs are never presented. Image promotion warns
-when surrounding inline layout changes or an image title is
-discarded. Their soft and hard alt-text breaks normalize to spaces. Images in
-headings and table cells fail
-intentionally rather than producing invalid ADF. Linked Markdown images fail
+when surrounding inline layout changes or an image title is discarded. Their soft
+and hard alt-text breaks normalize to spaces. Images in headings and table cells
+fail intentionally rather than producing invalid ADF. Linked Markdown images fail
 because v0.1 defines no canonical media-mark placement.
 
 Table cells accept nonempty paragraphs and the sole empty paragraph generated

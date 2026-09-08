@@ -68,12 +68,17 @@ canonicalization (LF and a trailing newline when nonempty), warning only when
 that changes the source text.
 
 Managed Jira image resolution is caller-supplied data only:
-`ResolvedJiraImage(source_url, media_id, collection)`. The bridge performs no
-URL parsing, origin checks, Media Services lookup, redirect handling, or network
-I/O. Exact parser-produced destinations select managed `file` media; all other
-images remain external. Persisted readback verification permits only documented
-Jira-generated local IDs, sizing, occurrence keys, and nonnegative dimensions,
-then rejects any managed-media path, identity, alt, layout, or structure change.
+`ResolvedJiraImage(source_url, media_id, collection, width=None, height=None)`.
+The bridge performs no URL parsing, origin checks, Media Services lookup, redirect
+handling, or network I/O. Exact parser-produced destinations select managed
+`file` media; all other images remain external. A managed image with paired
+positive integer dimensions gets exact child dimensions and centered `width: 100`,
+`widthType: percentage` block media. Legacy dimensionless managed images and
+external images remain centered and widthless. Persisted readback verification
+permits only documented Jira-generated local IDs and occurrence keys, requires
+dimensioned parent sizing and child dimensions to persist exactly, and preserves
+legacy compatibility by permitting Jira to add complete parent sizing and positive
+integer child dimensions to a widthless submitted image.
 
 Only exact lowercase `<br>` inside a GFM table cell is recognized as an ADF
 `hardBreak`. Other HTML spellings, attributes, and every `<br>` outside a table
