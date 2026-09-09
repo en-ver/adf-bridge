@@ -393,8 +393,9 @@ def _inline(
                 raise AdfConversionError("Markdown image has no usable URL")
             collector.image_urls.append(image_url)
             resolution = collector.resolutions.get(image_url)
+            media_attrs: dict[str, object]
             if resolution is None:
-                media_attrs: dict[str, object] = {
+                media_attrs = {
                     "type": "external",
                     "url": image_url,
                 }
@@ -405,6 +406,11 @@ def _inline(
                     "id": resolution.media_id,
                     "collection": resolution.collection,
                 }
+            container_attrs: dict[str, object] = {"layout": "center"}
+            if resolution is not None and resolution.width is not None:
+                assert resolution.height is not None
+                container_attrs.update(width=100, widthType="percentage")
+                media_attrs.update(width=resolution.width, height=resolution.height)
             if isinstance(attrs.get("title"), str):
                 collector.warn(
                     "markdown.image_title_discarded",
@@ -418,7 +424,7 @@ def _inline(
                     "type": "_block_media",
                     "value": {
                         "type": "mediaSingle",
-                        "attrs": {"layout": "center"},
+                        "attrs": container_attrs,
                         "content": [{"type": "media", "attrs": media_attrs}],
                     },
                 }

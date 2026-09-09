@@ -26,11 +26,13 @@ class Diagnostic:
 
 @dataclass(frozen=True, slots=True)
 class ResolvedJiraImage:
-    """Caller-resolved identity for a Markdown image stored by Jira."""
+    """Caller-resolved Jira identity with optional intrinsic image dimensions."""
 
     source_url: str
     media_id: str
     collection: str
+    width: int | None = None
+    height: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -35,6 +35,43 @@ def test_markdown_to_adf_produces_valid_representative_document() -> None:
         markdown_to_adf('[](https://example.test "title")')
 
 
+def test_markdown_image_nested_under_bullet_text_is_block_media() -> None:
+    result = markdown_to_adf(
+        "- Bullet text\n\n  ![diagram](https://images.test/diagram.png)"
+    )
+
+    assert result.value["content"] == [
+        {
+            "type": "bulletList",
+            "content": [
+                {
+                    "type": "listItem",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": "Bullet text"}],
+                        },
+                        {
+                            "type": "mediaSingle",
+                            "attrs": {"layout": "center"},
+                            "content": [
+                                {
+                                    "type": "media",
+                                    "attrs": {
+                                        "type": "external",
+                                        "url": "https://images.test/diagram.png",
+                                        "alt": "diagram",
+                                    },
+                                }
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+    ]
+
+
 def test_adf_to_markdown_escapes_literals_and_serializes_marks() -> None:
     literal_starts = [
         "# Title",

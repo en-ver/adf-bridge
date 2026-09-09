@@ -11,7 +11,7 @@ from adf_bridge import (
 )
 
 image_urls = markdown_image_urls("![diagram](https://jira.test/content/42)").value
-resolution = ResolvedJiraImage(image_urls[0], "media-id", "")
+resolution = ResolvedJiraImage(image_urls[0], "media-id", "", 640, 480)
 result = markdown_to_adf("![diagram](https://jira.test/content/42)", resolved_images=(resolution,))
 validate_adf(result.value)
 verify_jira_media_readback(result.value, result.value, resolved_images=(resolution,))
@@ -45,15 +45,20 @@ behavior. `resolved_images` is a keyword-only sequence of immutable
 Duplicate source URLs, duplicate Jira media identities (the same `media_id` and
 `collection`), and unused mappings raise `AdfConversionError`; a non-sequence,
 wrong item type, or wrong field type raises `TypeError`.
-A match produces a `mediaSingle` containing `file` media with only its resolved
-ID, collection, and that Markdown occurrence's nonempty alt text. The bridge does
-not look up URLs or add Jira presentation attributes.
+A match produces a `mediaSingle` containing `file` media with its resolved ID,
+collection, and that Markdown occurrence's nonempty alt text. `width` and
+`height` on `ResolvedJiraImage` are optional but must be paired positive integers.
+A dimensioned match has exact child dimensions and a centered `width: 100`,
+`widthType: percentage` parent. A legacy three-field resolution and an unmatched
+external image remain centered and widthless.
 
 `verify_jira_media_readback()` schema-validates submitted and persisted documents
 then compares only resolved file-media occurrences. It requires the same paths,
-identity, layout, and alt text, rejects extra occurrences and structural changes,
-and permits only Jira local IDs, a complete sizing pair, occurrence keys, and
-nonnegative media dimensions. Resolution mappings must have unique source URLs
-and Jira media identities; invalid mappings raise `AdfConversionError`. Otherwise,
-it raises `JiraMediaVerificationError` with the first failing RFC 6901 path. This
-is persistence verification, not a rendering or whole-document equality assertion.
+identity, layout, alt text, and, for dimensioned managed media, exact parent
+sizing and child dimensions; it rejects extra occurrences and structural changes.
+It permits Jira local IDs and occurrence keys, and permits Jira to add complete
+parent sizing and positive integer child dimensions to legacy widthless submitted
+media. Resolution mappings must have unique source URLs and Jira media identities;
+invalid mappings raise `AdfConversionError`. Otherwise, it raises
+`JiraMediaVerificationError` with the first failing RFC 6901 path. This is
+persistence verification, not a rendering or whole-document equality assertion.

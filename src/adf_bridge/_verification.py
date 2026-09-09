@@ -19,6 +19,10 @@ class _ManagedMedia:
     media_path: tuple[str | int, ...]
     identity: tuple[str, str]
     layout: str
+    parent_width: int | float | None
+    parent_width_type: str | None
+    child_width: int | None
+    child_height: int | None
     alt: str | None
 
 
@@ -30,9 +34,10 @@ def _validate_document(document: AdfDocument, label: str) -> None:
     try:
         validate_adf(document)
     except AdfValidationError as exc:
-        raise JiraMediaVerificationError(
-            f"{label} ADF fails schema validation", path=exc.path
-        ) from exc
+        path = exc.path
+    else:
+        return
+    raise JiraMediaVerificationError(f"{label} ADF fails schema validation", path=path)
 
 
 def _iter_nodes(
@@ -98,10 +103,48 @@ def _reject_unknown_keys(
             )
 
 
-def _nonnegative_number(value: object) -> bool:
-    return (
-        isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0
-    )
+def _number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _positive_int(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _parent_sizing(
+    attrs: dict[str, object], path: tuple[str | int, ...]
+) -> tuple[int | float | None, str | None]:
+    has_width = "width" in attrs
+    has_width_type = "widthType" in attrs
+    if has_width != has_width_type:
+        _fail("managed media sizing requires width and widthType", path)
+    if not has_width:
+        return None, None
+    width = attrs["width"]
+    width_type = attrs["widthType"]
+    if not _number(width):
+        _fail("managed media width must be a number", (*path, "width"))
+    if not isinstance(width_type, str):
+        _fail("managed media widthType must be a string", (*path, "widthType"))
+    return cast(int | float, width), width_type
+
+
+def _child_dimensions(
+    attrs: dict[str, object], path: tuple[str | int, ...]
+) -> tuple[int | None, int | None]:
+    has_width = "width" in attrs
+    has_height = "height" in attrs
+    if has_width != has_height:
+        _fail("managed media dimensions require width and height", path)
+    if not has_width:
+        return None, None
+    width = attrs["width"]
+    height = attrs["height"]
+    if not _positive_int(width):
+        _fail("managed media width must be a positive integer", (*path, "width"))
+    if not _positive_int(height):
+        _fail("managed media height must be a positive integer", (*path, "height"))
+    return cast(int, width), cast(int, height)
 
 
 def _alt(attrs: dict[str, object], path: tuple[str | int, ...]) -> str | None:
@@ -129,19 +172,34 @@ def _verify_managed_media(
     _reject_unknown_keys(node, {"type", "attrs", "content"}, path)
 
     container_attrs = _attrs(node, path)
-    allowed_container_attrs = {"layout"}
+    allowed_container_attrs = {"layout", "width", "widthType"}
     if persisted:
-        allowed_container_attrs.update({"localId", "width", "widthType"})
+        allowed_container_attrs.add("localId")
     _reject_unknown_keys(container_attrs, allowed_container_attrs, (*path, "attrs"))
     layout = container_attrs.get("layout")
     if not isinstance(layout, str):
         _fail("managed mediaSingle has no layout", (*path, "attrs", "layout"))
-    if expected is not None and layout != expected.layout:
-        _fail("persisted managed media layout changed", (*path, "attrs", "layout"))
-    has_width = "width" in container_attrs
-    has_width_type = "widthType" in container_attrs
-    if has_width != has_width_type:
-        _fail("managed media sizing requires width and widthType", (*path, "attrs"))
+    parent_width, parent_width_type = _parent_sizing(container_attrs, (*path, "attrs"))
+    if expected is not None:
+        if layout != expected.layout:
+            _fail("persisted managed media layout changed", (*path, "attrs", "layout"))
+        if expected.parent_width is not None:
+            if parent_width is None:
+                _fail(
+                    "persisted managed media width is missing",
+                    (*path, "attrs", "width"),
+                )
+            if parent_width != expected.parent_width or type(parent_width) is not type(
+                expected.parent_width
+            ):
+                _fail(
+                    "persisted managed media width changed", (*path, "attrs", "width")
+                )
+            if parent_width_type != expected.parent_width_type:
+                _fail(
+                    "persisted managed media widthType changed",
+                    (*path, "attrs", "widthType"),
+                )
 
     content = node.get("content")
     if not isinstance(content, list) or len(content) != 1:
@@ -156,9 +214,9 @@ def _verify_managed_media(
     media_node = cast(dict[str, object], media)
     _reject_unknown_keys(media_node, {"type", "attrs"}, media_path)
     media_attrs = _attrs(media_node, media_path)
-    allowed_media_attrs = {"type", "id", "collection", "alt"}
+    allowed_media_attrs = {"type", "id", "collection", "alt", "width", "height"}
     if persisted:
-        allowed_media_attrs.update({"localId", "occurrenceKey", "width", "height"})
+        allowed_media_attrs.update({"localId", "occurrenceKey"})
     _reject_unknown_keys(media_attrs, allowed_media_attrs, (*media_path, "attrs"))
     if media_attrs.get("type") != "file":
         _fail("managed media is no longer file media", (*media_path, "attrs", "type"))
@@ -169,11 +227,17 @@ def _verify_managed_media(
             "persisted managed media collection changed",
             (*media_path, "attrs", "collection"),
         )
-    for dimension in ("width", "height"):
-        if dimension in media_attrs and not _nonnegative_number(media_attrs[dimension]):
+    child_width, child_height = _child_dimensions(media_attrs, (*media_path, "attrs"))
+    if expected is not None and expected.child_width is not None:
+        if child_width is None:
             _fail(
-                f"managed media {dimension} must be a nonnegative number",
-                (*media_path, "attrs", dimension),
+                "persisted managed media dimensions are missing",
+                (*media_path, "attrs", "width"),
+            )
+        if child_width != expected.child_width or child_height != expected.child_height:
+            _fail(
+                "persisted managed media dimensions changed",
+                (*media_path, "attrs"),
             )
     alt = _alt(media_attrs, (*media_path, "attrs"))
     if expected is not None:
@@ -184,7 +248,17 @@ def _verify_managed_media(
                 )
         elif alt not in (None, ""):
             _fail("persisted managed media alt changed", (*media_path, "attrs", "alt"))
-    return _ManagedMedia(path, media_path, identity, layout, alt)
+    return _ManagedMedia(
+        path,
+        media_path,
+        identity,
+        layout,
+        parent_width,
+        parent_width_type,
+        child_width,
+        child_height,
+        alt,
+    )
 
 
 def _submitted_media(
@@ -205,6 +279,43 @@ def _submitted_media(
     return managed
 
 
+def _verify_submitted_resolution(
+    media: _ManagedMedia, resolution: ResolvedJiraImage
+) -> None:
+    attrs_path = (*media.container_path, "attrs")
+    child_attrs_path = (*media.media_path, "attrs")
+    if media.layout != "center":
+        _fail("submitted managed media layout must be center", (*attrs_path, "layout"))
+    if resolution.width is None:
+        if media.parent_width is not None:
+            _fail("legacy managed media must be widthless", (*attrs_path, "width"))
+        if media.child_width is not None:
+            _fail(
+                "legacy managed media must have no dimensions",
+                (*child_attrs_path, "width"),
+            )
+        return
+
+    assert resolution.height is not None
+    if media.parent_width != 100:
+        _fail("dimensioned managed media width must be 100", (*attrs_path, "width"))
+    if media.parent_width_type != "percentage":
+        _fail(
+            "dimensioned managed media widthType must be percentage",
+            (*attrs_path, "widthType"),
+        )
+    if media.child_width is None:
+        _fail(
+            "dimensioned managed media dimensions are missing",
+            (*child_attrs_path, "width"),
+        )
+    if media.child_width != resolution.width or media.child_height != resolution.height:
+        _fail(
+            "submitted managed media dimensions differ from its resolution",
+            child_attrs_path,
+        )
+
+
 def verify_jira_media_readback(
     submitted: AdfDocument,
     persisted: AdfDocument,
@@ -215,6 +326,10 @@ def verify_jira_media_readback(
 
     resolutions = _validated_resolved_images(resolved_images)
     identities = _resolved_image_identities(resolutions.values())
+    resolutions_by_identity = {
+        (resolution.media_id, resolution.collection): resolution
+        for resolution in resolutions.values()
+    }
     _validate_document(submitted, "submitted")
     _validate_document(persisted, "persisted")
 
@@ -222,6 +337,9 @@ def verify_jira_media_readback(
     submitted_identities = {media.identity for media in submitted_media}
     if identities.difference(submitted_identities):
         _fail("submitted ADF does not contain every resolved Jira media identity", ())
+    for media in submitted_media:
+        _verify_submitted_resolution(media, resolutions_by_identity[media.identity])
+
     expected_media_paths = {media.media_path for media in submitted_media}
     for expected in submitted_media:
         persisted_container = _value_at_path(persisted, expected.container_path)

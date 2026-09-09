@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add optional paired intrinsic dimensions to `ResolvedJiraImage`. Dimensioned
+  managed images now receive exact child dimensions and centered 100% parent
+  sizing; legacy dimensionless managed images and external images remain
+  widthless. Readback verification preserves the dimensioned structure while
+  retaining documented Jira enrichment compatibility for legacy images.
+
 ## 0.1.2 - 2026-09-07
 
 - Preserve Jira account-ID mentions nested in Markdown emphasis, strong, or
